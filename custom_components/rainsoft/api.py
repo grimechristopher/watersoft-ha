@@ -105,14 +105,10 @@ class RainsoftApiClient:
 
         response = await self._request("GET", "/customer")
 
-        if not response or "customer" not in response:
+        if not response or "id" not in response:
             raise RainsoftApiError("Invalid response from customer endpoint")
 
-        customer = response["customer"]
-        if "id" not in customer:
-            raise RainsoftApiError("Customer ID not found in response")
-
-        self._customer_id = str(customer["id"])
+        self._customer_id = str(response["id"])
         _LOGGER.debug("Customer ID: %s", self._customer_id)
         return self._customer_id
 
@@ -133,12 +129,12 @@ class RainsoftApiClient:
 
         response = await self._request("GET", f"/locations/{self._customer_id}")
 
-        if not response or "locations" not in response:
+        if not response or "locationListData" not in response:
             raise RainsoftApiError("Invalid response from locations endpoint")
 
         # Extract devices from locations
         devices = []
-        for location in response["locations"]:
+        for location in response["locationListData"]:
             if "devices" in location:
                 for device in location["devices"]:
                     # Add location info to device

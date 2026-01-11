@@ -1,2 +1,6 @@
 /.claude
 /LICENSE
+.env
+.venv/
+__pycache__/
+*.pyc
