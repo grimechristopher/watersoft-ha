@@ -1,0 +1,13 @@
+{
+  "domain": "rainsoft",
+  "name": "Rainsoft Water Softener",
+  "codeowners": ["@yourgithubusername"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/yourusername/watersoft-ha",
+  "integration_type": "device",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/yourusername/watersoft-ha/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

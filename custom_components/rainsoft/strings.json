@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Rainsoft",
+        "description": "Enter your Rainsoft Remind app credentials",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid email or password",
+      "cannot_connect": "Cannot connect to Rainsoft servers",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "Account already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rainsoft Options",
+        "description": "Configure polling interval",
+        "data": {
+          "scan_interval": "Update interval (hours, 1-4)"
+        }
+      }
+    }
+  }
+}
