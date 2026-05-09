@@ -234,11 +234,11 @@ class RainsoftCapacitySensor(RainsoftSensor):
 
 
 class RainsoftDailyWaterUseSensor(RainsoftSensor):
-    """Average daily water use in gallons."""
+    """Water used in the last 24 hours."""
 
     def __init__(self, coordinator: RainsoftDataUpdateCoordinator, device_id: str) -> None:
         """Initialize daily water use sensor."""
-        super().__init__(coordinator, device_id, "daily_water_use", "Daily Water Use")
+        super().__init__(coordinator, device_id, "daily_water_use", "Water Use (Last 24h)")
         self._attr_native_unit_of_measurement = UnitOfVolume.GALLONS
         self._attr_icon = "mdi:water"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -397,12 +397,12 @@ class RainsoftDrainFlowSensor(RainsoftSensor):
 
 
 class RainsoftPressureSensor(RainsoftSensor):
-    """Water pressure sensor."""
+    """Water pressure sensor (API reports in bar)."""
 
     def __init__(self, coordinator: RainsoftDataUpdateCoordinator, device_id: str) -> None:
         """Initialize pressure sensor."""
         super().__init__(coordinator, device_id, "pressure", "Water Pressure")
-        self._attr_native_unit_of_measurement = UnitOfPressure.PSI
+        self._attr_native_unit_of_measurement = UnitOfPressure.BAR
         self._attr_device_class = SensorDeviceClass.PRESSURE
         self._attr_icon = "mdi:gauge"
         self._attr_state_class = SensorStateClass.MEASUREMENT
