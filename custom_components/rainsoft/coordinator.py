@@ -68,9 +68,12 @@ class RainsoftDataUpdateCoordinator(DataUpdateCoordinator):
             "water_28day": int(device.get("water28Day") or 0),
             "flow_since_last_regen": int(device.get("flowSinceLastRegen") or 0),
             "lifetime_flow": int(device.get("lifeTimeFlow") or 0),
-            # System status
+            # Water quality
             "system_status": device.get("systemStatusName", "unknown"),
             "hardness": int(device.get("hardness") or 0),
+            "iron_level": float(device.get("ironLevel") or 0.0),
+            "pressure": float(device.get("pressure") or 0.0),
+            "drain_flow": float(device.get("drainFlow") or 0.0),
             # Regeneration
             "last_regeneration": device.get("lastRegenDate"),
             "next_regeneration": device.get("regenTime"),
