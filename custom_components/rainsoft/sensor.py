@@ -48,6 +48,7 @@ async def async_setup_entry(
                 # Capacity and water
                 RainsoftCapacitySensor(coordinator, device_id),
                 RainsoftDailyWaterUseSensor(coordinator, device_id),
+                RainsoftDailyWaterAvgSensor(coordinator, device_id),
                 RainsoftWater28DaySensor(coordinator, device_id),
                 RainsoftFlowSinceLastRegenSensor(coordinator, device_id),
                 RainsoftLifetimeFlowSensor(coordinator, device_id),
@@ -247,6 +248,25 @@ class RainsoftDailyWaterUseSensor(RainsoftSensor):
     def native_value(self) -> int | None:
         """Return sensor value."""
         return self._get_device_data().get("daily_water_use")
+
+
+class RainsoftDailyWaterAvgSensor(RainsoftSensor):
+    """Average daily water use computed from 28-day total."""
+
+    def __init__(self, coordinator: RainsoftDataUpdateCoordinator, device_id: str) -> None:
+        """Initialize daily water average sensor."""
+        super().__init__(coordinator, device_id, "daily_water_avg", "Daily Water Use (Avg)")
+        self._attr_native_unit_of_measurement = UnitOfVolume.GALLONS
+        self._attr_icon = "mdi:water"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> float | None:
+        """Return sensor value."""
+        water_28day = self._get_device_data().get("water_28day")
+        if not water_28day:
+            return None
+        return round(water_28day / 28, 1)
 
 
 class RainsoftWater28DaySensor(RainsoftSensor):
