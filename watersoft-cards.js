@@ -137,8 +137,7 @@ class WatersoftFlowCard extends HTMLElement {
             <div class="node">
               <div class="circle">🏛️</div>
               <div class="node-name">Water<br>Main</div>
-              <div class="node-val">${flowDisplay}</div>
-              ${rawFlow !== null ? '<div class="node-name">gal/min</div>' : '<div class="node-name">no flow sensor</div>'}
+              ${rawFlow !== null ? `<div class="node-val">${flowDisplay}</div><div class="node-name">gal/min</div>` : ''}
             </div>
 
             ${pipe(flowing, fc, speed)}
