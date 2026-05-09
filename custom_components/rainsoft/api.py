@@ -197,34 +197,49 @@ class RainsoftApiClient:
         Returns:
             Normalized device data dictionary
         """
-        # Extract key fields with safe defaults
+        dealer = device_data.get("dealer") or {}
+
+        salt_lbs = self._safe_int(device_data.get("saltLbs"))
+        max_salt = self._safe_int(device_data.get("maxSalt"))
+        salt_level = round(salt_lbs / max_salt * 100) if max_salt else None
+
         parsed = {
-            "device_id": device_data.get("id"),
+            "device_id": device_data.get("deviceId"),
             "device_name": device_data.get("name", "Rainsoft Water Softener"),
             "model": device_data.get("model"),
-            "serial_number": device_data.get("serial_number"),
-            "firmware_version": device_data.get("firmware_version"),
+            "firmware_version": device_data.get("firmwareVersion"),
 
-            # Salt and capacity
-            "salt_level": self._safe_int(device_data.get("salt_level")),
-            "capacity_remaining": self._safe_int(device_data.get("capacity_remaining")),
+            # Salt
+            "salt_lbs": salt_lbs,
+            "max_salt": max_salt,
+            "salt_level": salt_level,
+            "salt_28day": self._safe_int(device_data.get("salt28Day")),
+
+            # Capacity and water usage
+            "capacity_remaining": self._safe_int(device_data.get("capacityRemaining")),
+            "daily_water_use": self._safe_int(device_data.get("dailyWaterUse")),
+            "water_28day": self._safe_int(device_data.get("water28Day")),
+            "flow_since_last_regen": self._safe_int(device_data.get("flowSinceLastRegen")),
+            "lifetime_flow": self._safe_int(device_data.get("lifeTimeFlow")),
 
             # System status
-            "system_status": device_data.get("system_status_name", "unknown"),
+            "system_status": device_data.get("systemStatusName", "unknown"),
+            "hardness": self._safe_int(device_data.get("hardness")),
 
             # Regeneration
-            "last_regeneration": device_data.get("last_regeneration_date"),
-            "next_regeneration": device_data.get("next_regeneration_time"),
+            "last_regeneration": device_data.get("lastRegenDate"),
+            "next_regeneration": device_data.get("regenTime"),
+            "regens_28day": self._safe_int(device_data.get("regens28Day")),
+            "regens_this_month": self._safe_int(device_data.get("regensThisMonth")),
 
-            # Additional info
-            "dealer_name": device_data.get("dealer_name"),
-            "dealer_phone": device_data.get("dealer_phone"),
-            "dealer_email": device_data.get("dealer_email"),
+            # Dealer info
+            "dealer_name": dealer.get("name"),
+            "dealer_phone": dealer.get("phone"),
+            "dealer_email": dealer.get("email"),
         }
 
-        # Determine if regeneration is active
         system_status = parsed["system_status"].lower() if parsed["system_status"] else ""
-        parsed["regeneration_active"] = "regenerat" in system_status
+        parsed["regeneration_active"] = "regenerat" in system_status and "queued" not in system_status
 
         return parsed
 

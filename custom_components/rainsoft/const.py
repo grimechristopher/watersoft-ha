@@ -23,7 +23,14 @@ API_HEADER_AUTH = "X-Remind-Auth-Token"
 
 # Sensor types
 SENSOR_SALT_LEVEL = "salt_level"
+SENSOR_SALT_LBS = "salt_lbs"
+SENSOR_SALT_28DAY = "salt_28day"
 SENSOR_CAPACITY = "capacity_remaining"
+SENSOR_DAILY_WATER_USE = "daily_water_use"
+SENSOR_WATER_28DAY = "water_28day"
+SENSOR_FLOW_SINCE_REGEN = "flow_since_last_regen"
+SENSOR_LIFETIME_FLOW = "lifetime_flow"
+SENSOR_REGENS_28DAY = "regens_28day"
 SENSOR_LAST_REGEN = "last_regeneration"
 SENSOR_NEXT_REGEN = "next_regeneration"
 

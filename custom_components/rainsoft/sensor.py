@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, UnitOfMass, UnitOfVolume
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -28,23 +28,23 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Rainsoft sensors from config entry.
-
-    Args:
-        hass: HomeAssistant instance
-        entry: Config entry
-        async_add_entities: Callback to add entities
-    """
+    """Set up Rainsoft sensors from config entry."""
     coordinator: RainsoftDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     entities: list[SensorEntity] = []
 
-    # Create sensors for each device
     for device_id in coordinator.data:
         entities.extend(
             [
                 RainsoftSaltLevelSensor(coordinator, device_id),
+                RainsoftSaltLbsSensor(coordinator, device_id),
+                RainsoftSalt28DaySensor(coordinator, device_id),
                 RainsoftCapacitySensor(coordinator, device_id),
+                RainsoftDailyWaterUseSensor(coordinator, device_id),
+                RainsoftWater28DaySensor(coordinator, device_id),
+                RainsoftFlowSinceLastRegenSensor(coordinator, device_id),
+                RainsoftLifetimeFlowSensor(coordinator, device_id),
+                RainsoftRegens28DaySensor(coordinator, device_id),
                 RainsoftLastRegenerationSensor(coordinator, device_id),
                 RainsoftNextRegenerationSensor(coordinator, device_id),
             ]
@@ -64,14 +64,7 @@ class RainsoftSensor(CoordinatorEntity, SensorEntity):
         sensor_key: str,
         name_suffix: str,
     ) -> None:
-        """Initialize sensor.
-
-        Args:
-            coordinator: Data coordinator
-            device_id: Device ID
-            sensor_key: Key for sensor data
-            name_suffix: Suffix for entity name
-        """
+        """Initialize sensor."""
         super().__init__(coordinator)
         self._device_id = device_id
         self._sensor_key = sensor_key
@@ -111,7 +104,7 @@ class RainsoftSensor(CoordinatorEntity, SensorEntity):
 
 
 class RainsoftSaltLevelSensor(RainsoftSensor):
-    """Salt level sensor."""
+    """Salt level as a percentage of capacity."""
 
     def __init__(
         self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
@@ -125,27 +118,63 @@ class RainsoftSaltLevelSensor(RainsoftSensor):
     @property
     def native_value(self) -> int | None:
         """Return sensor value."""
-        data = self._get_device_data()
-        return data.get("salt_level")
+        return self._get_device_data().get("salt_level")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional attributes."""
         data = self._get_device_data()
         return {
+            "salt_lbs": data.get("salt_lbs"),
+            "max_salt_lbs": data.get("max_salt"),
             "device_id": self._device_id,
-            "model": data.get("model"),
         }
 
 
+class RainsoftSaltLbsSensor(RainsoftSensor):
+    """Salt remaining in pounds."""
+
+    def __init__(
+        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
+    ) -> None:
+        """Initialize salt lbs sensor."""
+        super().__init__(coordinator, device_id, "salt_lbs", "Salt Remaining")
+        self._attr_native_unit_of_measurement = UnitOfMass.POUNDS
+        self._attr_icon = "mdi:shaker-outline"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        """Return sensor value."""
+        return self._get_device_data().get("salt_lbs")
+
+
+class RainsoftSalt28DaySensor(RainsoftSensor):
+    """Salt used in last 28 days."""
+
+    def __init__(
+        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
+    ) -> None:
+        """Initialize 28-day salt sensor."""
+        super().__init__(coordinator, device_id, "salt_28day", "Salt Used (28 Days)")
+        self._attr_native_unit_of_measurement = UnitOfMass.POUNDS
+        self._attr_icon = "mdi:shaker"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        """Return sensor value."""
+        return self._get_device_data().get("salt_28day")
+
+
 class RainsoftCapacitySensor(RainsoftSensor):
-    """Capacity remaining sensor."""
+    """Softening capacity remaining before next regeneration."""
 
     def __init__(
         self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
     ) -> None:
         """Initialize capacity sensor."""
-        super().__init__(coordinator, device_id, "capacity_remaining", "Capacity")
+        super().__init__(coordinator, device_id, "capacity_remaining", "Capacity Remaining")
         self._attr_native_unit_of_measurement = PERCENTAGE
         self._attr_icon = "mdi:water-percent"
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -153,17 +182,105 @@ class RainsoftCapacitySensor(RainsoftSensor):
     @property
     def native_value(self) -> int | None:
         """Return sensor value."""
-        data = self._get_device_data()
-        return data.get("capacity_remaining")
+        return self._get_device_data().get("capacity_remaining")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional attributes."""
         data = self._get_device_data()
         return {
+            "flow_since_last_regen": data.get("flow_since_last_regen"),
             "device_id": self._device_id,
-            "model": data.get("model"),
         }
+
+
+class RainsoftDailyWaterUseSensor(RainsoftSensor):
+    """Daily water use in gallons."""
+
+    def __init__(
+        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
+    ) -> None:
+        """Initialize daily water use sensor."""
+        super().__init__(coordinator, device_id, "daily_water_use", "Daily Water Use")
+        self._attr_native_unit_of_measurement = UnitOfVolume.GALLONS
+        self._attr_icon = "mdi:water"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        """Return sensor value."""
+        return self._get_device_data().get("daily_water_use")
+
+
+class RainsoftWater28DaySensor(RainsoftSensor):
+    """Water used in last 28 days."""
+
+    def __init__(
+        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
+    ) -> None:
+        """Initialize 28-day water use sensor."""
+        super().__init__(coordinator, device_id, "water_28day", "Water Use (28 Days)")
+        self._attr_native_unit_of_measurement = UnitOfVolume.GALLONS
+        self._attr_icon = "mdi:water-outline"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        """Return sensor value."""
+        return self._get_device_data().get("water_28day")
+
+
+class RainsoftFlowSinceLastRegenSensor(RainsoftSensor):
+    """Gallons used since last regeneration."""
+
+    def __init__(
+        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
+    ) -> None:
+        """Initialize flow since regen sensor."""
+        super().__init__(coordinator, device_id, "flow_since_last_regen", "Flow Since Last Regen")
+        self._attr_native_unit_of_measurement = UnitOfVolume.GALLONS
+        self._attr_icon = "mdi:water-sync"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        """Return sensor value."""
+        return self._get_device_data().get("flow_since_last_regen")
+
+
+class RainsoftLifetimeFlowSensor(RainsoftSensor):
+    """Total lifetime water flow in gallons."""
+
+    def __init__(
+        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
+    ) -> None:
+        """Initialize lifetime flow sensor."""
+        super().__init__(coordinator, device_id, "lifetime_flow", "Lifetime Flow")
+        self._attr_native_unit_of_measurement = UnitOfVolume.GALLONS
+        self._attr_icon = "mdi:counter"
+        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    @property
+    def native_value(self) -> int | None:
+        """Return sensor value."""
+        return self._get_device_data().get("lifetime_flow")
+
+
+class RainsoftRegens28DaySensor(RainsoftSensor):
+    """Regeneration cycles in last 28 days."""
+
+    def __init__(
+        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
+    ) -> None:
+        """Initialize regens 28-day sensor."""
+        super().__init__(coordinator, device_id, "regens_28day", "Regenerations (28 Days)")
+        self._attr_icon = "mdi:refresh-circle"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        """Return sensor value."""
+        return self._get_device_data().get("regens_28day")
 
 
 class RainsoftLastRegenerationSensor(RainsoftSensor):
@@ -189,13 +306,10 @@ class RainsoftLastRegenerationSensor(RainsoftSensor):
             return None
 
         try:
-            # Try to parse as ISO date or datetime
             if "T" in date_str or " " in date_str:
-                # Contains time component
                 dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
                 return dt.date()
             else:
-                # Date only
                 return date.fromisoformat(date_str)
         except (ValueError, AttributeError) as err:
             _LOGGER.warning(
@@ -227,13 +341,10 @@ class RainsoftNextRegenerationSensor(RainsoftSensor):
             return None
 
         try:
-            # Try to parse as ISO date or datetime
             if "T" in date_str or " " in date_str:
-                # Contains time component
                 dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
                 return dt.date()
             else:
-                # Date only
                 return date.fromisoformat(date_str)
         except (ValueError, AttributeError) as err:
             _LOGGER.warning(

@@ -187,9 +187,11 @@ class RainsoftSaltLowSensor(RainsoftBinarySensor):
         (low salt).
         """
         data = self._get_device_data()
-        salt_level = data.get("salt_level", 100)
+        salt_level = data.get("salt_level")
 
-        # Consider salt low if below threshold
+        if salt_level is None:
+            return False
+
         return salt_level < SALT_LOW_THRESHOLD
 
     @property
@@ -197,7 +199,8 @@ class RainsoftSaltLowSensor(RainsoftBinarySensor):
         """Return additional attributes."""
         data = self._get_device_data()
         return {
-            "salt_level": data.get("salt_level"),
-            "threshold": SALT_LOW_THRESHOLD,
+            "salt_level_pct": data.get("salt_level"),
+            "salt_lbs": data.get("salt_lbs"),
+            "threshold_pct": SALT_LOW_THRESHOLD,
             "device_id": self._device_id,
         }
