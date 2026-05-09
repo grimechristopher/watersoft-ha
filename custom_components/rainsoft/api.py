@@ -146,29 +146,19 @@ class RainsoftApiClient:
         return devices
 
     async def get_device_status(self, device_id: str) -> dict[str, Any]:
-        """Get current status for a device.
+        """Get current status for a device (alias for get_device_detail)."""
+        return await self.get_device_detail(device_id)
 
-        Args:
-            device_id: Device ID
+    async def get_device_detail(self, device_id: str) -> dict[str, Any]:
+        """Get detailed data for a device from /device/{id} endpoint.
 
-        Returns:
-            Device status dictionary
-
-        Raises:
-            RainsoftAuthError: If not authenticated
-            RainsoftConnectionError: If connection fails
+        The response is the device object directly (not nested under "device").
         """
-        _LOGGER.debug("Fetching status for device %s", device_id)
-
+        _LOGGER.debug("Fetching detail for device %s", device_id)
         response = await self._request("GET", f"/device/{device_id}")
-
-        if not response or "device" not in response:
-            raise RainsoftApiError("Invalid response from device endpoint")
-
-        device_data = response["device"]
-
-        # Parse and normalize the data
-        return self._parse_device_data(device_data)
+        if not response:
+            raise RainsoftApiError("Empty response from device endpoint")
+        return response
 
     async def force_update(self) -> bool:
         """Request fresh data from device.

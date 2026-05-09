@@ -128,8 +128,10 @@ class RainsoftSystemAlertSensor(RainsoftBinarySensor):
         if not status:
             return False
 
-        # Any status other than "normal" is an alert
-        return status.lower() != "normal"
+        s = status.lower()
+        if "regenerat" in s:
+            return False
+        return s != "normal"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

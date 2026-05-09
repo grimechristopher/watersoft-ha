@@ -1,7 +1,7 @@
 """Sensor platform for Rainsoft integration."""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 import logging
 from typing import Any
 
@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfMass, UnitOfVolume
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -265,7 +266,7 @@ class RainsoftRegens28DaySensor(RainsoftSensor):
 
 
 class RainsoftLastRegenerationSensor(RainsoftSensor):
-    """Last regeneration date sensor."""
+    """Last regeneration datetime sensor."""
 
     def __init__(
         self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
@@ -274,33 +275,32 @@ class RainsoftLastRegenerationSensor(RainsoftSensor):
         super().__init__(
             coordinator, device_id, "last_regeneration", "Last Regeneration"
         )
-        self._attr_device_class = SensorDeviceClass.DATE
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
         self._attr_icon = "mdi:calendar-clock"
 
     @property
-    def native_value(self) -> date | None:
+    def native_value(self) -> datetime | None:
         """Return sensor value."""
         data = self._get_device_data()
         date_str = data.get("last_regeneration")
+        return self._parse_dt(date_str)
 
+    @staticmethod
+    def _parse_dt(date_str: str | None) -> datetime | None:
         if not date_str:
             return None
-
         try:
-            if "T" in date_str or " " in date_str:
-                dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                return dt.date()
-            else:
-                return date.fromisoformat(date_str)
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt_util.as_local(dt)
+            return dt
         except (ValueError, AttributeError) as err:
-            _LOGGER.warning(
-                "Could not parse last regeneration date '%s': %s", date_str, err
-            )
+            _LOGGER.warning("Could not parse datetime '%s': %s", date_str, err)
             return None
 
 
 class RainsoftNextRegenerationSensor(RainsoftSensor):
-    """Next regeneration date sensor."""
+    """Next regeneration datetime sensor."""
 
     def __init__(
         self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
@@ -309,26 +309,12 @@ class RainsoftNextRegenerationSensor(RainsoftSensor):
         super().__init__(
             coordinator, device_id, "next_regeneration", "Next Regeneration"
         )
-        self._attr_device_class = SensorDeviceClass.DATE
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
         self._attr_icon = "mdi:calendar-clock"
 
     @property
-    def native_value(self) -> date | None:
+    def native_value(self) -> datetime | None:
         """Return sensor value."""
         data = self._get_device_data()
         date_str = data.get("next_regeneration")
-
-        if not date_str:
-            return None
-
-        try:
-            if "T" in date_str or " " in date_str:
-                dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                return dt.date()
-            else:
-                return date.fromisoformat(date_str)
-        except (ValueError, AttributeError) as err:
-            _LOGGER.warning(
-                "Could not parse next regeneration date '%s': %s", date_str, err
-            )
-            return None
+        return RainsoftLastRegenerationSensor._parse_dt(date_str)

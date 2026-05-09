@@ -41,7 +41,10 @@ class RainsoftDataUpdateCoordinator(DataUpdateCoordinator):
         self.devices: list[dict[str, Any]] = []
 
     def _normalize_device_data(self, device: dict[str, Any]) -> dict[str, Any]:
-        """Normalize device data from API to expected format."""
+        """Normalize device data from API to expected format.
+
+        Accepts data from either /locations (uses "id") or /device/{id} (uses "deviceId").
+        """
         salt_lbs = int(device.get("saltLbs") or 0)
         max_salt = int(device.get("maxSalt") or 0)
         salt_level = min(round(salt_lbs / max_salt * 100), 100) if max_salt else None
@@ -49,7 +52,7 @@ class RainsoftDataUpdateCoordinator(DataUpdateCoordinator):
         dealer = device.get("dealer") or {}
 
         normalized = {
-            "id": device.get("id"),
+            "id": device.get("id") or device.get("deviceId"),
             "device_name": device.get("name", "Rainsoft Water Softener"),
             "model": device.get("model"),
             "serial_number": device.get("serialNumber"),
@@ -105,7 +108,18 @@ class RainsoftDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.warning("Device missing ID: %s", device)
                     continue
 
-                normalized = self._normalize_device_data(device)
+                # Try to get full detail from /device/{id} endpoint
+                try:
+                    detail = await self.api.get_device_detail(str(device_id))
+                    normalized = self._normalize_device_data(detail)
+                    # Preserve location info from the locations response
+                    normalized["location_id"] = device.get("location_id")
+                    normalized["location_name"] = device.get("location_name")
+                    normalized["id"] = str(device_id)
+                except Exception as err:
+                    _LOGGER.warning("Device detail fetch failed for %s, using basic data: %s", device_id, err)
+                    normalized = self._normalize_device_data(device)
+
                 device_data[str(device_id)] = normalized
 
                 _LOGGER.debug(
