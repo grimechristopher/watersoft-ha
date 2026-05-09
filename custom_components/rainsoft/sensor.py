@@ -37,7 +37,6 @@ async def async_setup_entry(
         entities.extend(
             [
                 RainsoftSaltLevelSensor(coordinator, device_id),
-                RainsoftSaltLbsSensor(coordinator, device_id),
                 RainsoftSalt28DaySensor(coordinator, device_id),
                 RainsoftCapacitySensor(coordinator, device_id),
                 RainsoftDailyWaterUseSensor(coordinator, device_id),
@@ -104,49 +103,31 @@ class RainsoftSensor(CoordinatorEntity, SensorEntity):
 
 
 class RainsoftSaltLevelSensor(RainsoftSensor):
-    """Salt level as a percentage of capacity."""
+    """Salt level in pounds."""
 
     def __init__(
         self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
     ) -> None:
         """Initialize salt level sensor."""
         super().__init__(coordinator, device_id, "salt_level", "Salt Level")
-        self._attr_native_unit_of_measurement = PERCENTAGE
+        self._attr_native_unit_of_measurement = UnitOfMass.POUNDS
         self._attr_icon = "mdi:shaker"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self) -> int | None:
         """Return sensor value."""
-        return self._get_device_data().get("salt_level")
+        return self._get_device_data().get("salt_lbs")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional attributes."""
         data = self._get_device_data()
         return {
-            "salt_lbs": data.get("salt_lbs"),
+            "salt_pct": data.get("salt_level"),
             "max_salt_lbs": data.get("max_salt"),
             "device_id": self._device_id,
         }
-
-
-class RainsoftSaltLbsSensor(RainsoftSensor):
-    """Salt remaining in pounds."""
-
-    def __init__(
-        self, coordinator: RainsoftDataUpdateCoordinator, device_id: str
-    ) -> None:
-        """Initialize salt lbs sensor."""
-        super().__init__(coordinator, device_id, "salt_lbs", "Salt Remaining")
-        self._attr_native_unit_of_measurement = UnitOfMass.POUNDS
-        self._attr_icon = "mdi:shaker-outline"
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-
-    @property
-    def native_value(self) -> int | None:
-        """Return sensor value."""
-        return self._get_device_data().get("salt_lbs")
 
 
 class RainsoftSalt28DaySensor(RainsoftSensor):
