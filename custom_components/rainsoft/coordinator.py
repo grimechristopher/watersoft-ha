@@ -30,13 +30,7 @@ class RainsoftDataUpdateCoordinator(DataUpdateCoordinator):
         api: RainsoftApiClient,
         update_interval: timedelta,
     ) -> None:
-        """Initialize coordinator.
-
-        Args:
-            hass: HomeAssistant instance
-            api: Rainsoft API client
-            update_interval: Update interval timedelta
-        """
+        """Initialize coordinator."""
         super().__init__(
             hass,
             _LOGGER,
@@ -47,62 +41,63 @@ class RainsoftDataUpdateCoordinator(DataUpdateCoordinator):
         self.devices: list[dict[str, Any]] = []
 
     def _normalize_device_data(self, device: dict[str, Any]) -> dict[str, Any]:
-        """Normalize device data from API to expected format.
+        """Normalize device data from API to expected format."""
+        salt_lbs = int(device.get("saltLbs") or 0)
+        max_salt = int(device.get("maxSalt") or 0)
+        salt_level = min(round(salt_lbs / max_salt * 100), 100) if max_salt else None
 
-        Args:
-            device: Raw device data from API
+        dealer = device.get("dealer") or {}
 
-        Returns:
-            Normalized device data
-        """
-        # Map API fields (camelCase) to expected fields (snake_case)
         normalized = {
             "id": device.get("id"),
             "device_name": device.get("name", "Rainsoft Water Softener"),
             "model": device.get("model"),
             "serial_number": device.get("serialNumber"),
-            "firmware_version": None,  # Not provided by API
-            # Salt and capacity
-            "salt_level": device.get("saltLbs", 0),
-            "capacity_remaining": device.get("capacityRemaining", 0),
+            "firmware_version": device.get("firmwareVersion"),
+            # Salt
+            "salt_lbs": salt_lbs,
+            "max_salt": max_salt,
+            "salt_level": salt_level,
+            "salt_28day": int(device.get("salt28Day") or 0),
+            # Capacity and water usage
+            "capacity_remaining": int(device.get("capacityRemaining") or 0),
+            "daily_water_use": int(device.get("dailyWaterUse") or 0),
+            "water_28day": int(device.get("water28Day") or 0),
+            "flow_since_last_regen": int(device.get("flowSinceLastRegen") or 0),
+            "lifetime_flow": int(device.get("lifeTimeFlow") or 0),
             # System status
             "system_status": device.get("systemStatusName", "unknown"),
+            "hardness": int(device.get("hardness") or 0),
             # Regeneration
-            "last_regeneration": None,  # Not provided by API
+            "last_regeneration": device.get("lastRegenDate"),
             "next_regeneration": device.get("regenTime"),
+            "regens_28day": int(device.get("regens28Day") or 0),
+            "regens_this_month": int(device.get("regensThisMonth") or 0),
+            # Dealer
+            "dealer_name": dealer.get("name"),
+            "dealer_phone": dealer.get("phone"),
+            "dealer_email": dealer.get("email"),
             # Location info
             "location_id": device.get("location_id"),
             "location_name": device.get("location_name"),
         }
 
-        # Calculate regeneration active from system status
         system_status = normalized["system_status"].lower() if normalized["system_status"] else ""
-        normalized["regeneration_active"] = "regenerat" in system_status
+        normalized["regeneration_active"] = "regenerat" in system_status and "queued" not in system_status
 
         return normalized
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from API.
-
-        Returns:
-            Dictionary mapping device IDs to device data
-
-        Raises:
-            ConfigEntryAuthFailed: If authentication fails
-            UpdateFailed: If update fails
-        """
+        """Fetch data from API."""
         try:
-            # Get all devices for this account
             devices = await self.api.get_devices()
 
             if not devices:
                 _LOGGER.warning("No devices found for this account")
                 return {}
 
-            # Store devices list for entity setup
             self.devices = devices
 
-            # Normalize device data (skip broken /device endpoint)
             device_data: dict[str, Any] = {}
             for device in devices:
                 device_id = device.get("id")
@@ -110,13 +105,13 @@ class RainsoftDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.warning("Device missing ID: %s", device)
                     continue
 
-                # Normalize the device data from /locations response
                 normalized = self._normalize_device_data(device)
                 device_data[str(device_id)] = normalized
 
                 _LOGGER.debug(
-                    "Updated device %s: salt=%s%%, capacity=%s%%, status=%s",
+                    "Updated device %s: salt=%s lbs (%s%%), capacity=%s%%, status=%s",
                     device_id,
+                    normalized.get("salt_lbs"),
                     normalized.get("salt_level"),
                     normalized.get("capacity_remaining"),
                     normalized.get("system_status"),
